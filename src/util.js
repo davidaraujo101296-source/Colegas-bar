@@ -161,6 +161,27 @@ export function limitesMes(ano, mes) {
   return { inicio: ini, fim };
 }
 
+/** Semana (segunda a domingo) que contém o dia, como horários ISO em Brasília. */
+export function limitesSemana(dia) {
+  const { inicio } = periodo('semana', dia);
+  const fim = somarDias(inicio, 7);
+  return { inicio: `${inicio}T00:00:00-03:00`, fim: `${fim}T00:00:00-03:00`, primeiroDia: inicio, ultimoDia: somarDias(inicio, 6) };
+}
+
+/** Soma o que cada pessoa pegou (só lançamentos com "quem pegou"). */
+export function totaisPorPessoa(movimentos) {
+  const mapa = new Map();
+  for (const m of movimentos) {
+    if (m.tipo !== 'compra' || !m.quem) continue;
+    const chave = m.quem.toLowerCase();
+    const t = mapa.get(chave) || { quem: m.quem, itens: 0, valor: 0 };
+    t.itens += m.quantidade || 1;
+    t.valor += m.valor;
+    mapa.set(chave, t);
+  }
+  return [...mapa.values()].sort((a, b) => b.valor - a.valor || a.quem.localeCompare(b.quem, 'pt-BR'));
+}
+
 /** Telefone para WhatsApp (wa.me): só números, com 55 do Brasil. Vazio se não tiver. */
 export function telefoneWhatsApp(tel) {
   const n = String(tel ?? '').replace(/\D/g, '');
@@ -178,18 +199,24 @@ export function formatarTelefone(tel) {
 }
 
 /** Mensagem com a conta do fiado do mês, para mandar no WhatsApp. */
-export function mensagemFiado({ cliente, ano, mes, movimentos, saldo, bar = 'Colegas Bar' }) {
-  const linhas = [`*${bar}* — conta do fiado`, `${cliente}, ${MESES[mes - 1]} de ${ano}:`, ''];
+export function mensagemFiado({ cliente, ano, mes, periodoTexto, movimentos, saldo, bar = 'Colegas Bar' }) {
+  const quando = periodoTexto || `${MESES[mes - 1]} de ${ano}`;
+  const linhas = [`*${bar}* — conta do fiado`, `${cliente}, ${quando}:`, ''];
   const ordem = [...movimentos].sort((a, b) => new Date(a.criado_em) - new Date(b.criado_em));
   for (const m of ordem) {
     const dia = ddmm(diaDe(m.criado_em));
     if (m.tipo === 'compra') {
-      linhas.push(`${dia} — ${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}: ${reais(m.valor)}`);
+      linhas.push(`${dia} — ${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}${m.quem ? ` (${m.quem})` : ''}: ${reais(m.valor)}`);
     } else {
       linhas.push(`${dia} — Pagamento: −${reais(m.valor)}`);
     }
   }
-  if (!ordem.length) linhas.push('Nada anotado neste mês.');
+  if (!ordem.length) linhas.push('Nada anotado neste período.');
+  const pessoas = totaisPorPessoa(ordem);
+  if (pessoas.length) {
+    linhas.push('', '*Por pessoa:*');
+    for (const p of pessoas) linhas.push(`${p.quem}: ${p.itens} ${p.itens === 1 ? 'item' : 'itens'} — ${reais(p.valor)}`);
+  }
   linhas.push('', `*Total devendo hoje: ${reais(saldo)}*`);
   return linhas.join('\n');
 }

@@ -12,7 +12,7 @@ Sistema do Colegas Bar para o celular: contas por mesa, lançamento por código 
 | **Contas** | As 10 mesas, onde as ocupadas ficam em vermelho e mostram o valor. Também tem contas com nome. A busca do topo lança direto no Balcão. |
 | **Conta da mesa** | Busca por **código ou nome**. O **+** lança o produto; o **lápis** edita nome e preço. Se o produto não existe, aparece **Criar**. |
 | **Fechar conta** | Dinheiro (com troco), Pix, Cartão ou Fiado. No fiado, cada produto vai para o caderninho do cliente. |
-| **Fiado** | Clientes (nome e telefone opcional) e quanto cada um deve. Tem lançamento de fiado e de pagamento, histórico por mês com dia e hora, e envio da conta do mês pelo WhatsApp. |
+| **Fiado** | Clientes (nome e telefone opcional) e quanto cada um deve. Tem lançamento de fiado e de pagamento, histórico **por mês ou por semana** com dia e hora, e envio da conta pelo WhatsApp. No lançamento, o campo opcional **"Quem pegou?"** serve para empresas (ex.: obra) cujos funcionários pegam no nome do patrão: o extrato e a mensagem mostram o total por pessoa. |
 | **Produtos** | Lista por tipo (Lanches, Cervejas, Bebidas e Doses, como na parede do bar), com edição fácil. Os códigos são criados sozinhos. |
 | **Painel** | Hoje, semana, mês ou datas escolhidas. Mostra o vendido, o que foi pago na hora, o **fiado a receber**, o que entrou no caixa, as vendas por dia, as formas de pagamento e os mais vendidos. |
 

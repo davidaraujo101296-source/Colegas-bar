@@ -341,3 +341,4 @@ input[type="date"] { min-height: 3.2rem; }
 
 :focus-visible { outline: 3px solid #1D4F91; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+.mov .nome small.quem { color: var(--tinta); font-weight: 700; }

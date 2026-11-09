@@ -100,7 +100,15 @@ export const criarCliente = ({ nome, telefone }) => ok(sb.from('clientes')
 export const editarCliente = (id, { nome, telefone }) => ok(sb.from('clientes')
   .update({ nome: nome.trim(), telefone: (telefone || '').trim() }).eq('id', id));
 export const apagarCliente = (id) => ok(sb.from('clientes').update({ ativo: false }).eq('id', id));
-export const lancarFiado = (clienteId, produtoId, qtd = 1) => rpc('lancar_fiado', { p_cliente: clienteId, p_produto: produtoId, p_qtd: qtd });
+export const lancarFiado = (clienteId, produtoId, quem = '', qtd = 1) => rpc('anotar_fiado', { p_cliente: clienteId, p_produto: produtoId, p_qtd: qtd, p_quem: quem });
+/** Nomes já usados em "Quem pegou?" para esse cliente (mais recentes primeiro). */
+export async function nomesQuem(clienteId) {
+  const linhas = await ok(sb.from('fiado').select('quem').eq('cliente_id', clienteId).neq('quem', '')
+    .order('criado_em', { ascending: false }).limit(300));
+  const vistos = new Map();
+  for (const { quem } of linhas) if (!vistos.has(quem.toLowerCase())) vistos.set(quem.toLowerCase(), quem);
+  return [...vistos.values()];
+}
 export const receberFiado = (clienteId, valor, forma) => rpc('receber_fiado', { p_cliente: clienteId, p_valor: valor, p_forma: forma });
 export const apagarMovimento = (id) => ok(sb.from('fiado').delete().eq('id', id).is('conta_id', null));
 

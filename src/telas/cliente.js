@@ -1,60 +1,128 @@
 import * as api from '../api.js';
-import { h, icone, tentar, avisar, folha, confirmar, campoDinheiro, escolhaChips } from '../ui.js';
+import { h, icone, tentar, avisar, folha, confirmar, campoDinheiro, campoTexto, escolhaChips } from '../ui.js';
 import { criarBusca } from '../busca.js';
-import { reais, diaDe, horaDe, rotuloDia, limitesMes, MESES, agruparPorDia, mensagemFiado, telefoneWhatsApp, ddmm, formatarTelefone } from '../util.js';
+import {
+  reais, diaDe, horaDe, rotuloDia, limitesMes, limitesSemana, rotuloPeriodo, somarDias, MESES, agruparPorDia,
+  mensagemFiado, telefoneWhatsApp, ddmm, formatarTelefone, totaisPorPessoa,
+} from '../util.js';
 import { folhaCliente } from './fechar.js';
 import { NOME_BAR } from '../config.js';
 
 const FORMA_PG = { Dinheiro: 'dinheiro', Pix: 'pix', Cartão: 'cartao' };
 const NOME_FORMA = { dinheiro: 'em dinheiro', pix: 'no Pix', cartao: 'no cartão' };
-let mesVisto = null; // { id, ano, mes }
+const nomeMes = (m) => `${MESES[m - 1].charAt(0).toUpperCase()}${MESES[m - 1].slice(1)}`;
+
+// Período escolhido na tela do cliente: por mês ou por semana.
+let visto = null; // { id, modo: 'mes'|'semana', ano, mes, dia }
 
 export async function telaCliente(id, { ir, recarregar }) {
   const hoje = diaDe();
-  if (!mesVisto || mesVisto.id !== id) mesVisto = { id, ano: Number(hoje.slice(0, 4)), mes: Number(hoje.slice(5, 7)) };
-  const { ano, mes } = mesVisto;
-  const { inicio, fim } = limitesMes(ano, mes);
-  const [c, movs, primeiro] = await Promise.all([api.cliente(id), api.movimentos(id, inicio, fim), api.primeiroMovimento(id)]);
+  if (!visto || visto.id !== id) visto = { id, modo: 'mes', ano: Number(hoje.slice(0, 4)), mes: Number(hoje.slice(5, 7)), dia: hoje };
 
-  const ehMesAtual = ano === Number(hoje.slice(0, 4)) && mes === Number(hoje.slice(5, 7));
-  const primeiroMes = primeiro ? diaDe(primeiro.criado_em).slice(0, 7) : hoje.slice(0, 7);
-  const atual = `${ano}-${String(mes).padStart(2, '0')}`;
-  const mudarMes = (d) => {
-    let m = mes + d; let a = ano;
-    if (m < 1) { m = 12; a -= 1; }
-    if (m > 12) { m = 1; a += 1; }
-    mesVisto = { id, ano: a, mes: m };
-    recarregar();
-  };
-
-  async function lancar() {
-    let lancados = 0;
-    let soma = 0;
-    const resumo = h('p', { class: 's' }, 'Procure o produto e toque no + para anotar.');
-    await folha((fechar) => {
-      const busca = criarBusca({
-        flutuante: false,
-        subtituloCriar: `Vai ser anotado no fiado de ${c.nome}.`,
-        textoBotaoCriar: 'Criar e anotar',
-        aoLancar: async (p) => {
-          if (await tentar(() => api.lancarFiado(id, p.id)) === undefined) return;
-          lancados += 1;
-          soma += p.preco;
-          resumo.textContent = `Anotado agora: ${lancados} ${lancados === 1 ? 'item' : 'itens'} · ${reais(soma)}`;
-          avisar(`+1 ${p.nome} no fiado`, 'ok', 1300);
-        },
-      });
-      setTimeout(() => busca.input.focus(), 120);
-      return [
-        h('h3', null, `Fiado de ${c.nome}`),
-        resumo,
-        busca.el,
-        h('div', { class: 'pilha', style: 'margin-top:1rem' }, h('button', { type: 'button', class: 'btn escuro', onclick: () => fechar() }, icone('i-check'), 'Pronto')),
-      ];
-    });
-    if (lancados) recarregar();
+  let inicio; let fim; let titulo; let periodoTexto; let ehAtual; let anteriorAntes;
+  if (visto.modo === 'semana') {
+    const s = limitesSemana(visto.dia);
+    ({ inicio, fim } = s);
+    titulo = rotuloPeriodo(s.primeiroDia, s.ultimoDia, '');
+    periodoTexto = `semana de ${ddmm(s.primeiroDia)} a ${ddmm(s.ultimoDia)}`;
+    ehAtual = hoje >= s.primeiroDia && hoje <= s.ultimoDia;
+    anteriorAntes = s.primeiroDia;
+  } else {
+    ({ inicio, fim } = limitesMes(visto.ano, visto.mes));
+    titulo = `${nomeMes(visto.mes)} ${visto.ano}`;
+    periodoTexto = `${MESES[visto.mes - 1]} de ${visto.ano}`;
+    ehAtual = visto.ano === Number(hoje.slice(0, 4)) && visto.mes === Number(hoje.slice(5, 7));
+    anteriorAntes = `${visto.ano}-${String(visto.mes).padStart(2, '0')}-01`;
   }
 
+  const [c, movs, primeiro] = await Promise.all([api.cliente(id), api.movimentos(id, inicio, fim), api.primeiroMovimento(id)]);
+  const primeiroDia = primeiro ? diaDe(primeiro.criado_em) : hoje;
+  const temAnterior = primeiroDia < anteriorAntes;
+
+  function mudarPeriodo(d) {
+    if (visto.modo === 'semana') {
+      visto.dia = somarDias(limitesSemana(visto.dia).primeiroDia, 7 * d);
+    } else {
+      let m = visto.mes + d; let a = visto.ano;
+      if (m < 1) { m = 12; a -= 1; }
+      if (m > 12) { m = 1; a += 1; }
+      visto.mes = m; visto.ano = a;
+    }
+    recarregar();
+  }
+  function mudarModo(modo) {
+    if (modo === visto.modo) return;
+    visto = { id, modo, ano: Number(hoje.slice(0, 4)), mes: Number(hoje.slice(5, 7)), dia: hoje };
+    recarregar();
+  }
+
+  // ---------- lançar fiado (com "Quem pegou?" opcional) ----------
+  async function lancar() {
+    const nomes = (await tentar(() => api.nomesQuem(id))) || [];
+    let quem = '';
+    let lancados = 0;
+    let soma = 0;
+    const resumo = h('p', { class: 's' }, 'Escolha quem pegou (se quiser) e toque no + do produto.');
+    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': 'Quem pegou' });
+
+    function desenharNomes() {
+      chips.replaceChildren(
+        ...nomes.map((n) => h('button', {
+          type: 'button', class: 'chip', 'aria-pressed': String(n === quem),
+          onclick: () => { quem = quem === n ? '' : n; desenharNomes(); },
+        }, n)),
+        h('button', { type: 'button', class: 'chip', style: 'border-style:dashed;color:var(--vermelho-escuro)', onclick: novoNome }, icone('i-mais'), 'Novo nome'),
+      );
+    }
+    async function novoNome() {
+      const nome = await folha((fechar) => {
+        const campo = campoTexto({ rotulo: 'Nome de quem pegou', placeholder: 'Ex.: Samuel', max: 40 });
+        return [
+          h('h3', null, 'Novo nome'),
+          h('p', { class: 's' }, `Para lançar no fiado de ${c.nome}.`),
+          h('form', { onsubmit: (e) => { e.preventDefault(); const v = campo.input.value.trim(); if (v) fechar(v.charAt(0).toUpperCase() + v.slice(1)); else campo.input.focus(); } },
+            campo.el, h('button', { class: 'btn', type: 'submit' }, icone('i-check'), 'Usar este nome')),
+        ];
+      });
+      // A folha do lançamento foi fechada para abrir a do nome: reabre já com o nome escolhido.
+      if (nome) {
+        if (!nomes.some((n) => n.toLowerCase() === nome.toLowerCase())) nomes.unshift(nome);
+        quem = nomes.find((n) => n.toLowerCase() === nome.toLowerCase());
+      }
+      abrirFolha();
+    }
+
+    const busca = criarBusca({
+      flutuante: false,
+      subtituloCriar: `Vai ser anotado no fiado de ${c.nome}.`,
+      textoBotaoCriar: 'Criar e anotar',
+      aoLancar: async (p) => {
+        if (await tentar(() => api.lancarFiado(id, p.id, quem)) === undefined) return;
+        lancados += 1;
+        soma += p.preco;
+        resumo.textContent = `Anotado agora: ${lancados} ${lancados === 1 ? 'item' : 'itens'} · ${reais(soma)}`;
+        avisar(`+1 ${p.nome}${quem ? ` para ${quem}` : ''}`, 'ok', 1500);
+      },
+    });
+
+    async function abrirFolha() {
+      desenharNomes();
+      await folha((fechar) => {
+        setTimeout(() => busca.input.focus(), 120);
+        return [
+          h('h3', null, `Fiado de ${c.nome}`),
+          resumo,
+          h('div', { class: 'campo' }, h('span', null, 'Quem pegou?', h('span', { class: 'opc' }, '(opcional)')), chips),
+          busca.el,
+          h('div', { class: 'pilha', style: 'margin-top:1rem' }, h('button', { type: 'button', class: 'btn escuro', onclick: () => fechar('pronto') }, icone('i-check'), 'Pronto')),
+        ];
+      }).then((v) => { if (v !== undefined || !document.querySelector('.vela')) terminou(); });
+    }
+    function terminou() { if (lancados) recarregar(); }
+    abrirFolha();
+  }
+
+  // ---------- receber pagamento ----------
   async function receber() {
     const r = await folha((fechar) => {
       const valor = campoDinheiro({ rotulo: 'Quanto pagou?' });
@@ -96,20 +164,21 @@ export async function telaCliente(id, { ir, recarregar }) {
 
   async function tocarMovimento(m) {
     if (m.conta_id) { avisar('Esse fiado veio de uma conta fechada. Para acertar, lance um pagamento.', 'erro'); return; }
-    const o = m.tipo === 'compra' ? `${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}` : 'pagamento';
+    const o = m.tipo === 'compra' ? `${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}${m.quem ? ` (${m.quem})` : ''}` : 'pagamento';
     if (!(await confirmar('Apagar este lançamento?', `${o} de ${reais(m.valor)} em ${ddmm(diaDe(m.criado_em))} às ${horaDe(m.criado_em)}. Use só se foi lançado errado.`, { sim: 'Sim, apagar', perigo: true }))) return;
     if (await tentar(() => api.apagarMovimento(m.id)) !== undefined) { avisar('Lançamento apagado'); recarregar(); }
   }
 
   function whatsapp() {
-    const texto = mensagemFiado({ cliente: c.nome, ano, mes, movimentos: movs, saldo: c.saldo, bar: NOME_BAR });
-    const tel = telefoneWhatsApp(c.telefone);
-    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+    const texto = mensagemFiado({ cliente: c.nome, periodoTexto, movimentos: movs, saldo: c.saldo, bar: NOME_BAR });
+    window.open(`https://wa.me/${telefoneWhatsApp(c.telefone)}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
   }
 
   const pegou = movs.filter((m) => m.tipo === 'compra').reduce((s, m) => s + m.valor, 0);
   const pagou = movs.filter((m) => m.tipo === 'pagamento').reduce((s, m) => s + m.valor, 0);
+  const pessoas = totaisPorPessoa(movs);
   const ultimoPg = c.ultimo_pagamento ? `Último pagamento: ${ddmm(diaDe(c.ultimo_pagamento))}` : 'Ainda não pagou nada';
+  const nomePeriodo = visto.modo === 'semana' ? 'nesta semana' : `em ${MESES[visto.mes - 1]}`;
 
   const historico = movs.length
     ? agruparPorDia(movs).map(({ dia, lista }) => [
@@ -118,10 +187,11 @@ export async function telaCliente(id, { ir, recarregar }) {
         h('span', { class: 'h' }, horaDe(m.criado_em)),
         h('span', { class: 'nome' },
           m.tipo === 'compra' ? `${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}` : 'Pagamento',
+          m.tipo === 'compra' && m.quem ? h('small', { class: 'quem' }, `👤 ${m.quem}`) : null,
           m.tipo === 'pagamento' && m.forma ? h('small', null, NOME_FORMA[m.forma]) : null),
         h('span', { class: 'v' }, m.tipo === 'pagamento' ? `− ${reais(m.valor)}` : reais(m.valor)))),
     ])
-    : h('div', { class: 'vazio' }, `Nada anotado em ${MESES[mes - 1]}.`);
+    : h('div', { class: 'vazio' }, `Nada anotado ${nomePeriodo}.`);
 
   return {
     topo: {
@@ -136,16 +206,26 @@ export async function telaCliente(id, { ir, recarregar }) {
       h('div', { class: 'duas', style: 'margin-top:0.7rem' },
         h('button', { type: 'button', class: 'btn', onclick: lancar }, 'Lançar fiado'),
         h('button', { type: 'button', class: 'btn verde', onclick: receber }, 'Recebi pagamento')),
+      h('div', { class: 'seg', style: 'grid-template-columns:1fr 1fr;margin-top:1.1rem', role: 'group', 'aria-label': 'Ver por' },
+        h('button', { type: 'button', 'aria-pressed': String(visto.modo === 'mes'), onclick: () => mudarModo('mes') }, 'Por mês'),
+        h('button', { type: 'button', 'aria-pressed': String(visto.modo === 'semana'), onclick: () => mudarModo('semana') }, 'Por semana')),
       h('div', { class: 'periodo' },
-        h('button', { type: 'button', 'aria-label': 'Mês anterior', disabled: atual <= primeiroMes, onclick: () => mudarMes(-1) }, icone('i-volta')),
-        h('b', null, `${MESES[mes - 1].charAt(0).toUpperCase()}${MESES[mes - 1].slice(1)} ${ano}`),
-        h('button', { type: 'button', 'aria-label': 'Próximo mês', disabled: ehMesAtual, onclick: () => mudarMes(1) }, icone('i-frente'))),
+        h('button', { type: 'button', 'aria-label': 'Período anterior', disabled: !temAnterior, onclick: () => mudarPeriodo(-1) }, icone('i-volta')),
+        h('b', null, titulo),
+        h('button', { type: 'button', 'aria-label': 'Próximo período', disabled: ehAtual, onclick: () => mudarPeriodo(1) }, icone('i-frente'))),
       h('div', { class: 'resumo-mes' }, h('span', null, `Pegou ${reais(pegou)}`), h('span', null, `Pagou ${reais(pagou)}`)),
+      pessoas.length ? h('div', { class: 'cartao', style: 'margin-top:0.8rem' },
+        h('h4', null, `Por pessoa ${nomePeriodo}`),
+        pessoas.map((p) => h('div', { class: 'rank' },
+          h('span', { class: 'nome' }, p.quem),
+          h('span', { class: 'q' }, `${p.itens} ${p.itens === 1 ? 'item' : 'itens'}`),
+          h('span', { class: 'num' }, reais(p.valor))))) : null,
       historico,
       h('button', { type: 'button', class: 'link-discreto', onclick: apagarCliente }, 'Apagar cliente'),
     ],
     rodape: [h('button', { type: 'button', class: 'btn claro', onclick: whatsapp },
-      h('span', { style: 'color:var(--verde);display:flex' }, icone('i-zap')), `Mandar conta de ${MESES[mes - 1]} no WhatsApp`)],
-    limpar: () => { if (!location.hash.startsWith(`#/cliente/${id}`)) mesVisto = null; },
+      h('span', { style: 'color:var(--verde);display:flex' }, icone('i-zap')),
+      visto.modo === 'semana' ? 'Mandar conta da semana no WhatsApp' : `Mandar conta de ${MESES[visto.mes - 1]} no WhatsApp`)],
+    limpar: () => { if (!location.hash.startsWith(`#/cliente/${id}`)) visto = null; },
   };
 }

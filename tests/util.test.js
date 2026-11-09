@@ -122,3 +122,33 @@ it('valor curto do painel', () => {
   expect(reaisCurto(600)).toBe('R$ 6');
   expect(reaisCurto(201050)).toBe('R$ 2.011');
 });
+
+import { totaisPorPessoa, limitesSemana } from '../src/util.js';
+describe('quem pegou (empresa no fiado)', () => {
+  const movs = [
+    { tipo: 'compra', descricao: 'Almoço', quantidade: 1, valor: 2300, quem: 'Samuel', criado_em: '2026-11-09T15:00:00Z' },
+    { tipo: 'compra', descricao: 'Almoço', quantidade: 1, valor: 2300, quem: 'samuel', criado_em: '2026-11-10T15:00:00Z' },
+    { tipo: 'compra', descricao: 'Refrigerante lata', quantidade: 2, valor: 1400, quem: 'Ricardo', criado_em: '2026-11-10T15:05:00Z' },
+    { tipo: 'compra', descricao: 'Almoço', quantidade: 1, valor: 2300, quem: '', criado_em: '2026-11-10T15:06:00Z' },
+    { tipo: 'pagamento', valor: 1000, quem: '', criado_em: '2026-11-11T15:00:00Z' },
+  ];
+  it('soma por pessoa sem ligar para maiúscula', () => {
+    expect(totaisPorPessoa(movs)).toEqual([
+      { quem: 'Samuel', itens: 2, valor: 4600 },
+      { quem: 'Ricardo', itens: 2, valor: 1400 },
+    ]);
+  });
+  it('mensagem com nome e total por pessoa', () => {
+    const msg = mensagemFiado({ cliente: 'Obra', periodoTexto: 'semana de 09/11 a 15/11', movimentos: movs, saldo: 7300 }).replace(/ /g, ' ');
+    expect(msg).toContain('Obra, semana de 09/11 a 15/11:');
+    expect(msg).toContain('09/11 — Almoço (Samuel): R$ 23,00');
+    expect(msg).toContain('10/11 — 2x Refrigerante lata (Ricardo): R$ 14,00');
+    expect(msg).toContain('*Por pessoa:*');
+    expect(msg).toContain('Samuel: 2 itens — R$ 46,00');
+  });
+  it('semana vai de segunda a domingo', () => {
+    expect(limitesSemana('2026-11-12')).toEqual({
+      inicio: '2026-11-09T00:00:00-03:00', fim: '2026-11-16T00:00:00-03:00', primeiroDia: '2026-11-09', ultimoDia: '2026-11-15',
+    });
+  });
+});
