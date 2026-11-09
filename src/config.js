@@ -8,4 +8,4 @@ export const EMAIL_LOGIN = 'davidaraujo101296@gmail.com';
 
 export const NOME_BAR = 'Colegas Bar';
 export const QTD_MESAS = 10;
-export const CATEGORIAS = ['Bebidas', 'Comidas', 'Doses', 'Outros'];
+export const CATEGORIAS = ['Lanches', 'Cervejas', 'Bebidas', 'Doses'];

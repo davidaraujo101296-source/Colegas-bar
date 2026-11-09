@@ -13,7 +13,7 @@ Sistema do Colegas Bar para o celular: contas por mesa, lançamento por código 
 | **Conta da mesa** | Busca por **código ou nome**. O **+** lança o produto; o **lápis** edita nome e preço. Se o produto não existe, aparece **Criar**. |
 | **Fechar conta** | Dinheiro (com troco), Pix, Cartão ou Fiado. No fiado, cada produto vai para o caderninho do cliente. |
 | **Fiado** | Clientes (nome e telefone opcional) e quanto cada um deve. Tem lançamento de fiado e de pagamento, histórico por mês com dia e hora, e envio da conta do mês pelo WhatsApp. |
-| **Produtos** | Lista por tipo (Bebidas, Comidas, Doses, Outros), com edição fácil. Os códigos são criados sozinhos. |
+| **Produtos** | Lista por tipo (Lanches, Cervejas, Bebidas e Doses, como na parede do bar), com edição fácil. Os códigos são criados sozinhos. |
 | **Painel** | Hoje, semana, mês ou datas escolhidas. Mostra o vendido, o que foi pago na hora, o **fiado a receber**, o que entrou no caixa, as vendas por dia, as formas de pagamento e os mais vendidos. |
 
 O tamanho da letra muda nos botões **A−** e **A+**, sempre no topo. São 5 tamanhos, e o celular guarda a escolha.
@@ -53,4 +53,3 @@ Organização do código:
 ## Para o futuro
 
 - Impressora na cozinha: usar uma impressora térmica com impressão pela nuvem (Star CloudPRNT ou Epson Server Direct Print).
-- Trocar os produtos de exemplo pela tabela real do bar.
