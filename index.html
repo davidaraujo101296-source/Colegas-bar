@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Colegas Bar</title>
+  <meta name="description" content="Contas, fiado e vendas do Colegas Bar">
+  <meta name="theme-color" content="#D12A2A">
+  <link rel="icon" href="/icone.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icone-180.png">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    // Tamanho de letra guardado: aplica antes de desenhar para não "pular".
+    (function () {
+      var t = [15, 16.5, 18, 20.5, 23], n = 2;
+      try { var g = parseInt(localStorage.getItem('tamanhoLetra'), 10); if (g >= 0 && g < t.length) n = g; } catch (e) {}
+      document.documentElement.style.fontSize = t[n] + 'px';
+    })();
+  </script>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="logo" viewBox="0 0 64 64">
+        <rect width="64" height="64" rx="18" fill="#fff"/>
+        <g fill="none" stroke="#D12A2A" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round">
+          <g transform="rotate(-14 22 36)"><path d="M13 22h17v24a4 4 0 0 1-4 4h-9a4 4 0 0 1-4-4z"/><path d="M30 28h3a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-3"/><path d="M13 29h17"/></g>
+          <g transform="rotate(14 42 36)"><path d="M34 22h17v24a4 4 0 0 1-4 4h-9a4 4 0 0 1-4-4z"/><path d="M34 28h-3a4 4 0 0 0-4 4v3a4 4 0 0 0 4 4h3"/><path d="M34 29h17"/></g>
+        </g>
+        <g stroke="#D12A2A" stroke-width="3" stroke-linecap="round"><path d="M32 8v6M24 11l2.5 4.5M40 11l-2.5 4.5"/></g>
+      </symbol>
+      <symbol id="i-busca" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+      <symbol id="i-mais" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-volta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></symbol>
+      <symbol id="i-frente" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></symbol>
+      <symbol id="i-conta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2z"/><path d="M9 8h6M9 12h6" stroke-linecap="round"/></symbol>
+      <symbol id="i-livro" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></symbol>
+      <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5" fill="currentColor"/></symbol>
+      <symbol id="i-graf" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></symbol>
+      <symbol id="i-lapis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="m13 7 4 4"/></symbol>
+      <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"><path d="M4 20l1.3-4A8 8 0 1 1 8 18.7z"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></symbol>
+      <symbol id="i-sair" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4M15 8l4 4-4 4M19 12H9"/></symbol>
+    </defs>
+  </svg>
+  <div id="app"></div>
+  <div id="avisos" role="status" aria-live="polite"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
