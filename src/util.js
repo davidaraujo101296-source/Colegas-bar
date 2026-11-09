@@ -140,6 +140,8 @@ export function periodo(tipo, hoje = diaDe()) {
     return { inicio: somarDias(hoje, -((dow + 6) % 7)), fim: hoje };
   }
   if (tipo === 'mes') return { inicio: `${hoje.slice(0, 8)}01`, fim: hoje };
+  if (tipo === 'ano') return { inicio: `${hoje.slice(0, 4)}-01-01`, fim: hoje };
+  if (tipo === 'ontem') { const d = somarDias(hoje, -1); return { inicio: d, fim: d }; }
   return { inicio: hoje, fim: hoje };
 }
 

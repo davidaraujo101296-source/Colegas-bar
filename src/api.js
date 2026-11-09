@@ -83,6 +83,9 @@ export const lancarItem = (contaId, produtoId, qtd = 1) => rpc('lancar_item', { 
 export const mudarQuantidade = (itemId, qtd) => rpc('mudar_quantidade', { p_item: itemId, p_qtd: qtd });
 export const fecharConta = (id, forma, clienteId = null) => rpc('fechar_conta', { p_conta: id, p_forma: forma, p_cliente: clienteId });
 export const cancelarConta = (id) => rpc('cancelar_conta', { p_conta: id });
+export const restaurarConta = (id) => rpc('restaurar_conta', { p_conta: id });
+export const reabrirConta = (id) => rpc('reabrir_conta', { p_conta: id });
+export const trocarForma = (id, forma, clienteId = null) => rpc('trocar_forma', { p_conta: id, p_forma: forma, p_cliente: clienteId });
 
 // ---------- fiado ----------
 export const clientes = () => ok(sb.from('clientes_saldo').select('*').order('nome'));
@@ -91,10 +94,10 @@ export async function cliente(id) {
   if (!c) throw new Error('Cliente não encontrado.');
   return c;
 }
-export const movimentos = (clienteId, inicio, fim) => ok(sb.from('fiado').select('*')
-  .eq('cliente_id', clienteId).gte('criado_em', inicio).lt('criado_em', fim).order('criado_em', { ascending: false }));
+export const movimentos = (clienteId, inicio, fim) => ok(sb.from('fiado').select('*, contas(mesa, nome, fechada_em)')
+  .eq('cliente_id', clienteId).eq('cancelado', false).gte('criado_em', inicio).lt('criado_em', fim).order('criado_em', { ascending: false }));
 export const primeiroMovimento = (clienteId) => ok(sb.from('fiado').select('criado_em')
-  .eq('cliente_id', clienteId).order('criado_em').limit(1).maybeSingle());
+  .eq('cliente_id', clienteId).eq('cancelado', false).order('criado_em').limit(1).maybeSingle());
 export const criarCliente = ({ nome, telefone }) => ok(sb.from('clientes')
   .insert({ nome: nome.trim(), telefone: (telefone || '').trim() }).select().single());
 export const editarCliente = (id, { nome, telefone }) => ok(sb.from('clientes')
@@ -103,14 +106,17 @@ export const apagarCliente = (id) => ok(sb.from('clientes').update({ ativo: fals
 export const lancarFiado = (clienteId, produtoId, quem = '', qtd = 1) => rpc('anotar_fiado', { p_cliente: clienteId, p_produto: produtoId, p_qtd: qtd, p_quem: quem });
 /** Nomes já usados em "Quem pegou?" para esse cliente (mais recentes primeiro). */
 export async function nomesQuem(clienteId) {
-  const linhas = await ok(sb.from('fiado').select('quem').eq('cliente_id', clienteId).neq('quem', '')
+  const linhas = await ok(sb.from('fiado').select('quem').eq('cliente_id', clienteId).eq('cancelado', false).neq('quem', '')
     .order('criado_em', { ascending: false }).limit(300));
   const vistos = new Map();
   for (const { quem } of linhas) if (!vistos.has(quem.toLowerCase())) vistos.set(quem.toLowerCase(), quem);
   return [...vistos.values()];
 }
 export const receberFiado = (clienteId, valor, forma) => rpc('receber_fiado', { p_cliente: clienteId, p_valor: valor, p_forma: forma });
-export const apagarMovimento = (id) => ok(sb.from('fiado').delete().eq('id', id).is('conta_id', null));
+export const cancelarLancamentoFiado = (id, modo = 'item') => rpc('cancelar_lancamento_fiado', { p_id: id, p_modo: modo });
+export const restaurarLancamentoFiado = (id) => rpc('restaurar_lancamento_fiado', { p_id: id });
+export const corrigirLancamentoFiado = (id, qtd, quem) => rpc('corrigir_lancamento_fiado', { p_id: id, p_qtd: qtd, p_quem: quem });
 
 // ---------- painel ----------
 export const painel = (inicio, fim) => rpc('painel', { p_inicio: inicio, p_fim: fim });
+export const lancamentos = (inicio, fim, tipo = 'tudo', busca = '') => rpc('lancamentos', { p_inicio: inicio, p_fim: fim, p_tipo: tipo, p_busca: busca, p_limite: 300 });

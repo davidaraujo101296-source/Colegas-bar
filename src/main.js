@@ -112,12 +112,13 @@ async function mostrar({ manterRolagem = false } = {}) {
   }
   if (minha !== versao || !tela) return;
   document.title = tela.topo?.titulo ? `${tela.topo.titulo} · ${NOME_BAR}` : NOME_BAR;
-  app.replaceChildren(
+  app.replaceChildren(...[
     montarTopo(tela.topo || { marca: true }),
     h('main', { class: `conteudo ${tela.rodape ? 'com-rodape' : ''}` }, tela.conteudo),
-    tela.fab || null,
+    tela.fab,
     tela.rodape ? h('div', { class: 'rodape' }, tela.rodape) : null,
-    tela.nav ? montarNav(tela.nav) : null);
+    tela.nav ? montarNav(tela.nav) : null,
+  ].filter(Boolean));
   limparAnterior = tela.limpar || null;
   window.scrollTo(0, manterRolagem ? rolagem : 0);
   tela.depois?.();

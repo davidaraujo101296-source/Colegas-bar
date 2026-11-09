@@ -47,6 +47,19 @@ export function avisar(texto, tipo = 'ok', ms = 2200) {
   timerAviso = setTimeout(() => caixa.replaceChildren(), tipo === 'erro' ? Math.max(ms, 4500) : ms);
 }
 
+/** Aviso com botão "Desfazer" (fica 7 segundos). */
+export function avisarDesfazer(texto, desfazer) {
+  const caixa = document.getElementById('avisos');
+  clearTimeout(timerAviso);
+  const botao = h('button', { type: 'button', class: 'desfazer' }, 'Desfazer');
+  botao.addEventListener('click', async () => {
+    caixa.replaceChildren();
+    await desfazer();
+  });
+  caixa.replaceChildren(h('div', { class: 'aviso com-acao' }, h('span', null, texto), botao));
+  timerAviso = setTimeout(() => caixa.replaceChildren(), 7000);
+}
+
 /** Roda uma ação; se der erro, mostra a mensagem. Devolve undefined no erro. */
 export async function tentar(acao) {
   try {

@@ -24,6 +24,37 @@ export function folhaCliente({ cliente = null, nomeInicial = '' } = {}) {
   });
 }
 
+/** Folha para escolher (ou cadastrar) o cliente do fiado. Devolve o cliente ou undefined. */
+export async function escolherCliente({ titulo = 'Quem vai ficar devendo?' } = {}) {
+  const lista = await tentar(() => api.clientes());
+  if (!lista) return undefined;
+  return folha((fechar) => {
+    const caixa = h('div', { class: 'lista' });
+    const busca = h('input', { type: 'search', placeholder: 'Procurar cliente', autocomplete: 'off', 'aria-label': 'Procurar cliente' });
+    const desenhar = () => {
+      const t = normalizar(busca.value);
+      const vis = lista.filter((x) => !t || normalizar(x.nome).includes(t));
+      caixa.replaceChildren(...vis.map((x) => h('button', { type: 'button', class: 'linha', onclick: () => fechar(x) },
+        h('div', { class: 'ini' }, x.nome.charAt(0).toUpperCase()),
+        h('div', { class: 'meio' }, h('div', { class: 'nome' }, x.nome), x.saldo > 0 ? h('div', { class: 'det deve' }, `Já deve ${reais(x.saldo)}`) : null))));
+      if (!vis.length) caixa.append(h('div', { class: 'vazio' }, lista.length ? 'Ninguém com esse nome.' : 'Nenhum cliente cadastrado ainda.'));
+    };
+    busca.addEventListener('input', desenhar);
+    desenhar();
+    return [
+      h('h3', null, titulo),
+      h('div', { class: 'busca solta', style: 'margin:0.6rem 0' }, icone('i-busca'), busca),
+      h('button', { type: 'button', class: 'botao-tracejado', style: 'margin:0 0 0.7rem', onclick: async () => {
+        const dados = await folhaCliente({ nomeInicial: busca.value.trim() });
+        if (!dados) return;
+        const novo = await tentar(() => api.criarCliente(dados));
+        if (novo) { avisar(`✓ ${novo.nome} cadastrado`); fechar(novo); }
+      } }, icone('i-mais'), 'Cliente novo'),
+      caixa,
+    ];
+  });
+}
+
 export async function telaFechar(id, { ir }) {
   const c = await api.conta(id);
   if (c.status !== 'aberta') { ir(`#/conta/${id}`); return null; }

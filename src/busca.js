@@ -87,11 +87,11 @@ export function criarBusca({ aoLancar, placeholder = 'Código ou nome do produto
     const achados = buscarProdutos(produtos, termo);
     const nomeNovo = nomeBonito(termo);
     const podeCriar = !/^\d+$/.test(termo.trim());
-    lista.replaceChildren(
+    lista.replaceChildren(...[
       ...(achados.length ? achados.map((p) => linhaProduto(p, termo)) : [h('div', { class: 'res-vazio' }, 'Não achei nenhum produto com esse nome ou código.')]),
       podeCriar ? h('button', { type: 'button', class: 'criar', onclick: () => criar(nomeNovo) },
         h('span', { class: 'mais' }, icone('i-mais')), `Criar "${nomeNovo}"`) : null,
-    );
+    ].filter(Boolean));
     lista.hidden = false;
   }
 

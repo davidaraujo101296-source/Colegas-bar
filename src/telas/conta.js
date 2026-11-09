@@ -1,13 +1,14 @@
 import * as api from '../api.js';
-import { h, icone, tentar, avisar, confirmar, folhaProduto } from '../ui.js';
+import { h, icone, tentar, avisar, avisarDesfazer, confirmar, folha, folhaProduto } from '../ui.js';
+import { escolherCliente } from './fechar.js';
 import { criarBusca } from '../busca.js';
-import { reais, horaDe } from '../util.js';
+import { reais, horaDe, diaDe, rotuloDia } from '../util.js';
 
 export const nomeConta = (c) => (c.mesa ? `Mesa ${c.mesa}` : c.nome);
 
 export async function telaConta(id, { ir, recarregar }) {
   const c = await api.conta(id);
-  if (c.status !== 'aberta') return telaContaFechada(c);
+  if (c.status !== 'aberta') return telaContaFechada(c, { ir, recarregar });
 
   const nome = nomeConta(c);
   const busca = criarBusca({
@@ -77,17 +78,91 @@ export async function telaConta(id, { ir, recarregar }) {
 }
 
 const FORMAS = { dinheiro: 'Dinheiro', pix: 'Pix', cartao: 'Cartão', fiado: 'Fiado' };
+const EMOJI = { dinheiro: '💵', pix: '📱', cartao: '💳', fiado: '📒' };
 
-function telaContaFechada(c) {
+function dataHoraTexto(ts) {
+  return `${rotuloDia(diaDe(ts))} às ${horaDe(ts)}`;
+}
+
+/** Conta fechada ou cancelada: ver tudo e corrigir (trocar forma, reabrir, cancelar, restaurar). */
+function telaContaFechada(c, { ir, recarregar }) {
   const nome = nomeConta(c);
-  const situacao = c.status === 'cancelada' ? 'Cancelada' : `Paga no ${FORMAS[c.forma]}${c.clientes?.nome ? ` — ${c.clientes.nome}` : ''}`;
+  const cancelada = c.status === 'cancelada';
+
+  async function trocar() {
+    const forma = await folha((fechar) => [
+      h('h3', null, 'Trocar forma de pagamento'),
+      h('p', { class: 's' }, `Hoje está como ${FORMAS[c.forma]}${c.clientes?.nome ? ` (${c.clientes.nome})` : ''}.`),
+      h('div', { class: 'formas' }, Object.keys(FORMAS).map((f) => h('button', {
+        type: 'button', class: 'forma-btn', 'aria-pressed': String(f === c.forma), onclick: () => fechar(f),
+      }, h('span', { class: 'emoji', 'aria-hidden': 'true' }, EMOJI[f]), FORMAS[f]))),
+    ]);
+    if (!forma) return;
+    let cliente = null;
+    if (forma === 'fiado') {
+      cliente = await escolherCliente();
+      if (!cliente) return;
+    } else if (forma === c.forma) return;
+    if (await tentar(() => api.trocarForma(c.id, forma, cliente?.id ?? null)) === undefined) return;
+    avisar(forma === 'fiado' ? `✓ Agora está no fiado de ${cliente.nome}` : `✓ Agora está como ${FORMAS[forma]}`);
+    recarregar();
+  }
+
+  async function reabrir() {
+    const ok = await confirmar(`Reabrir a conta da ${nome}?`,
+      `Ela volta para as contas abertas para você mudar os itens e fechar de novo.${c.forma === 'fiado' && !cancelada ? ` Os itens saem do fiado de ${c.clientes?.nome}.` : ''}`,
+      { sim: 'Sim, reabrir' });
+    if (!ok) return;
+    if (await tentar(() => api.reabrirConta(c.id)) === undefined) return;
+    avisar('✓ Conta reaberta');
+    ir(`#/conta/${c.id}`);
+  }
+
+  async function cancelar() {
+    const ok = await confirmar(`Cancelar a conta da ${nome}?`,
+      `Ela sai das vendas${c.forma === 'fiado' ? ` e do fiado de ${c.clientes?.nome}` : ''}. Dá para desfazer depois, no filtro "Canceladas".`,
+      { sim: 'Sim, cancelar conta', nao: 'Não', perigo: true });
+    if (!ok) return;
+    if (await tentar(() => api.cancelarConta(c.id)) === undefined) return;
+    avisarDesfazer(`Conta da ${nome} cancelada`, async () => {
+      if (await tentar(() => api.restaurarConta(c.id)) !== undefined) { avisar('✓ Desfeito'); recarregar(); }
+    });
+    recarregar();
+  }
+
+  async function restaurar() {
+    const r = await tentar(() => api.restaurarConta(c.id));
+    if (r === undefined) return;
+    avisar(r === 'aberta' ? '✓ Conta voltou a ficar aberta' : '✓ Conta restaurada');
+    if (r === 'aberta') ir(`#/conta/${c.id}`); else recarregar();
+  }
+
+  const qtd = c.itens.reduce((s, i) => s + i.quantidade, 0);
   return {
-    topo: { voltar: '#/painel', titulo: nome, sub: situacao },
+    topo: { voltar: '#/painel', titulo: nome, sub: cancelada ? 'Conta cancelada' : 'Conta fechada' },
     conteudo: [
-      h('div', { class: 'lista' }, c.itens.map((i) => h('div', { class: 'item' },
-        h('div', { class: 'meio' }, h('div', { class: 'nome' }, `${i.quantidade}x ${i.nome}`)),
-        h('div', { class: 'valor num' }, reais(i.preco * i.quantidade))))),
+      h('div', { class: 'cartao info-conta' },
+        h('div', null, h('span', null, 'Situação'), cancelada ? h('b', { class: 'selo cancelada' }, 'Cancelada')
+          : h('b', { class: `selo ${c.forma === 'fiado' ? 'fiado' : 'paga'}` }, `${EMOJI[c.forma]} ${FORMAS[c.forma]}`)),
+        c.forma === 'fiado' && c.clientes?.nome ? h('div', null, h('span', null, 'Fiado de'),
+          h('a', { href: `#/cliente/${c.cliente_id}`, style: 'font-weight:800;color:var(--vermelho-escuro)' }, c.clientes.nome)) : null,
+        h('div', null, h('span', null, 'Aberta'), h('b', null, dataHoraTexto(c.aberta_em))),
+        c.fechada_em ? h('div', null, h('span', null, cancelada && !c.forma ? 'Cancelada' : 'Fechada'), h('b', null, dataHoraTexto(c.fechada_em))) : null,
+        cancelada && c.cancelada_em && c.forma ? h('div', null, h('span', null, 'Cancelada'), h('b', null, dataHoraTexto(c.cancelada_em))) : null),
+      h('div', { class: 'secao' }, `${qtd} ${qtd === 1 ? 'item' : 'itens'}`),
+      c.itens.length ? h('div', { class: 'lista' }, c.itens.map((i) => h('div', { class: 'item' },
+        h('div', { class: 'meio' }, h('div', { class: 'nome' }, `${i.quantidade}x ${i.nome}`),
+          i.quantidade > 1 ? h('div', { class: 'det' }, `${reais(i.preco)} cada`) : null),
+        h('div', { class: 'valor num' }, reais(i.preco * i.quantidade)))))
+        : h('div', { class: 'vazio' }, 'Nenhum item.'),
+      h('div', { class: 'secao' }, 'Corrigir'),
+      h('div', { class: 'pilha', style: 'margin-top:0' },
+        cancelada
+          ? h('button', { type: 'button', class: 'btn verde', onclick: restaurar }, 'Desfazer cancelamento')
+          : h('button', { type: 'button', class: 'btn claro', onclick: trocar }, 'Trocar forma de pagamento'),
+        h('button', { type: 'button', class: 'btn claro', onclick: reabrir }, 'Reabrir conta (mudar itens)'),
+        cancelada ? null : h('button', { type: 'button', class: 'btn perigo', onclick: cancelar }, 'Cancelar conta')),
     ],
-    rodape: [h('div', { class: 'total' }, h('span', null, 'Total'), h('strong', null, reais(c.total)))],
+    rodape: [h('div', { class: 'total' }, h('span', null, cancelada ? 'Total (cancelada)' : 'Total'), h('strong', null, reais(c.total)))],
   };
 }

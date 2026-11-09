@@ -152,3 +152,10 @@ describe('quem pegou (empresa no fiado)', () => {
     });
   });
 });
+
+describe('períodos novos do painel', () => {
+  it('ontem e ano', () => {
+    expect(periodo('ontem', '2026-11-01')).toEqual({ inicio: '2026-10-31', fim: '2026-10-31' });
+    expect(periodo('ano', '2026-11-09')).toEqual({ inicio: '2026-01-01', fim: '2026-11-09' });
+  });
+});

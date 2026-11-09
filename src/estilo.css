@@ -342,3 +342,32 @@ input[type="date"] { min-height: 3.2rem; }
 :focus-visible { outline: 3px solid #1D4F91; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
 .mov .nome small.quem { color: var(--tinta); font-weight: 700; }
+
+/* aviso com Desfazer */
+.aviso.com-acao { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; text-align: left; pointer-events: auto; }
+.aviso .desfazer { background: #fff; color: var(--tinta); border-radius: 12px; padding: 0.55rem 0.9rem; font-weight: 800; flex: none; }
+
+/* lançamentos */
+.lanc { display: flex; gap: 0.7rem; align-items: center; background: #fff; border: 2px solid var(--linha); border-radius: 16px; padding: 0.65rem 0.8rem; margin-bottom: 0.45rem; width: 100%; text-align: left; color: var(--tinta); text-decoration: none; }
+.lanc .h { font-family: var(--titulo); font-weight: 800; color: var(--apagado); font-size: 0.95rem; width: 2.8rem; flex: none; }
+.lanc .meio { flex: 1; min-width: 0; }
+.lanc .nome { font-weight: 700; overflow-wrap: anywhere; }
+.lanc .det { color: var(--apagado); font-size: 0.85rem; overflow-wrap: anywhere; }
+.lanc .lado { text-align: right; flex: none; }
+.lanc .v { font-family: var(--titulo); font-weight: 800; white-space: nowrap; }
+.lanc .tag { display: inline-block; font-size: 0.75rem; font-weight: 800; border-radius: 8px; padding: 0.05rem 0.45rem; margin-top: 2px; background: #F1EAE4; color: var(--apagado); }
+.lanc .tag.fiado { background: var(--ambar-suave); color: var(--ambar); }
+.lanc .tag.pix, .lanc .tag.dinheiro, .lanc .tag.cartao, .lanc .tag.pagamento { background: var(--verde-suave); color: var(--verde); }
+.lanc.cancelado { opacity: 0.6; border-style: dashed; }
+.lanc.cancelado .nome, .lanc.cancelado .v { text-decoration: line-through; }
+.lanc.cancelado .tag { background: var(--vermelho-suave); color: var(--vermelho-escuro); }
+.resumo-lanc { display: flex; flex-wrap: wrap; gap: 0.3rem 1rem; justify-content: space-between; font-weight: 700; color: var(--apagado); margin: 0.8rem 0.1rem 0.2rem; font-size: 0.92rem; }
+.resumo-lanc b { color: var(--tinta); font-family: var(--titulo); }
+.info-conta { display: grid; gap: 0.35rem; }
+.info-conta div { display: flex; justify-content: space-between; gap: 1rem; }
+.info-conta span { color: var(--apagado); font-weight: 600; }
+.info-conta b { text-align: right; }
+.selo { display: inline-block; font-weight: 800; border-radius: 10px; padding: 0.2rem 0.6rem; font-size: 0.85rem; }
+.selo.paga { background: var(--verde-suave); color: var(--verde); }
+.selo.cancelada { background: var(--vermelho-suave); color: var(--vermelho-escuro); }
+.selo.fiado { background: var(--ambar-suave); color: var(--ambar); }

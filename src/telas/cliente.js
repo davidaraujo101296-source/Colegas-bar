@@ -1,5 +1,5 @@
 import * as api from '../api.js';
-import { h, icone, tentar, avisar, folha, confirmar, campoDinheiro, campoTexto, escolhaChips } from '../ui.js';
+import { h, icone, tentar, avisar, avisarDesfazer, folha, confirmar, campoDinheiro, campoTexto, escolhaChips } from '../ui.js';
 import { criarBusca } from '../busca.js';
 import {
   reais, diaDe, horaDe, rotuloDia, limitesMes, limitesSemana, rotuloPeriodo, somarDias, MESES, agruparPorDia,
@@ -162,11 +162,66 @@ export async function telaCliente(id, { ir, recarregar }) {
     if (await tentar(() => api.apagarCliente(id)) !== undefined) { avisar('Cliente apagado'); ir('#/fiado'); }
   }
 
+  // ---------- tocar num lançamento: ver, corrigir ou apagar ----------
+  async function corrigir(m) {
+    const nomes = (await tentar(() => api.nomesQuem(id))) || [];
+    const daConta = !!m.conta_id;
+    let qtd = m.quantidade;
+    const r = await folha((fechar) => {
+      const out = h('output', null, String(qtd));
+      const passo = h('div', { class: 'passo' },
+        h('button', { type: 'button', 'aria-label': 'Menos um', onclick: () => { if (qtd > 1) { qtd -= 1; out.textContent = qtd; } } }, '−'),
+        out,
+        h('button', { type: 'button', class: 'p', 'aria-label': 'Mais um', onclick: () => { qtd += 1; out.textContent = qtd; } }, '+'));
+      const campo = campoTexto({ rotulo: 'Quem pegou?', valor: m.quem || '', opcional: true, placeholder: 'Ninguém', max: 40 });
+      const chips = h('div', { class: 'chips', style: 'margin:-0.4rem 0 1rem' }, nomes.map((n) => h('button', {
+        type: 'button', class: 'chip', onclick: () => { campo.input.value = n; },
+      }, n)));
+      return [
+        h('h3', null, 'Corrigir lançamento'),
+        h('p', { class: 's' }, `${m.descricao} · ${reais(m.valor / m.quantidade)} cada`),
+        daConta ? h('p', { class: 's' }, 'Veio de uma conta: para mudar a quantidade, reabra a conta.')
+          : h('div', { class: 'campo' }, h('span', null, 'Quantidade'), passo),
+        campo.el, nomes.length ? chips : null,
+        h('button', { type: 'button', class: 'btn', onclick: () => fechar({ qtd, quem: campo.input.value.trim() }) }, icone('i-check'), 'Salvar'),
+      ];
+    });
+    if (!r) return;
+    if (await tentar(() => api.corrigirLancamentoFiado(m.id, r.qtd, r.quem)) !== undefined) { avisar('✓ Lançamento corrigido'); recarregar(); }
+  }
+
+  async function apagar(m, modo = 'item') {
+    if (await tentar(() => api.cancelarLancamentoFiado(m.id, modo)) === undefined) return;
+    const texto = modo === 'conta' ? 'Conta inteira cancelada' : m.tipo === 'pagamento' ? 'Pagamento apagado' : 'Lançamento apagado';
+    avisarDesfazer(texto, async () => {
+      if (await tentar(() => api.restaurarLancamentoFiado(m.id)) !== undefined) { avisar('✓ Desfeito'); recarregar(); }
+    });
+    recarregar();
+  }
+
   async function tocarMovimento(m) {
-    if (m.conta_id) { avisar('Esse fiado veio de uma conta fechada. Para acertar, lance um pagamento.', 'erro'); return; }
-    const o = m.tipo === 'compra' ? `${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}${m.quem ? ` (${m.quem})` : ''}` : 'pagamento';
-    if (!(await confirmar('Apagar este lançamento?', `${o} de ${reais(m.valor)} em ${ddmm(diaDe(m.criado_em))} às ${horaDe(m.criado_em)}. Use só se foi lançado errado.`, { sim: 'Sim, apagar', perigo: true }))) return;
-    if (await tentar(() => api.apagarMovimento(m.id)) !== undefined) { avisar('Lançamento apagado'); recarregar(); }
+    const nomeContaOrigem = m.contas ? (m.contas.mesa ? `Mesa ${m.contas.mesa}` : m.contas.nome) : null;
+    const titulo = m.tipo === 'compra' ? `${m.quantidade > 1 ? `${m.quantidade}x ` : ''}${m.descricao}` : 'Pagamento';
+    const acao = await folha((fechar) => [
+      h('h3', null, titulo),
+      h('div', { class: 'cartao info-conta', style: 'margin:0.6rem 0 1rem' },
+        h('div', null, h('span', null, 'Quando'), h('b', null, `${rotuloDia(diaDe(m.criado_em), hoje)} às ${horaDe(m.criado_em)}`)),
+        h('div', null, h('span', null, 'Valor'), h('b', null, reais(m.valor))),
+        m.tipo === 'pagamento' && m.forma ? h('div', null, h('span', null, 'Pagou'), h('b', null, NOME_FORMA[m.forma])) : null,
+        m.quem ? h('div', null, h('span', null, 'Quem pegou'), h('b', null, m.quem)) : null,
+        nomeContaOrigem ? h('div', null, h('span', null, 'Veio da conta'), h('b', null, nomeContaOrigem)) : null),
+      h('div', { class: 'pilha', style: 'margin-top:0' },
+        m.tipo === 'compra' ? h('button', { type: 'button', class: 'btn claro', onclick: () => fechar('corrigir') }, icone('i-lapis'), 'Corrigir') : null,
+        m.conta_id ? [
+          h('button', { type: 'button', class: 'btn perigo', onclick: () => fechar('item') }, 'Tirar só este item'),
+          h('button', { type: 'button', class: 'btn perigo', onclick: () => fechar('conta') }, `Cancelar a conta inteira (${nomeContaOrigem})`),
+          h('button', { type: 'button', class: 'btn claro', onclick: () => fechar('ver') }, 'Ver a conta'),
+        ] : h('button', { type: 'button', class: 'btn perigo', onclick: () => fechar('item') }, m.tipo === 'pagamento' ? 'Apagar pagamento' : 'Apagar lançamento')),
+    ]);
+    if (acao === 'corrigir') corrigir(m);
+    else if (acao === 'item') apagar(m, 'item');
+    else if (acao === 'conta') apagar(m, 'conta');
+    else if (acao === 'ver') ir(`#/conta/${m.conta_id}`);
   }
 
   function whatsapp() {
